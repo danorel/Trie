@@ -1,5 +1,7 @@
 package trie;
 
+import trie.exceptions.TrieEmptyInputException;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -12,22 +14,26 @@ public class Trie {
         ROOT = new Node();
     }
 
-    public void insert(String word){
-        HashMap<Character, Node> nodes =
-                (HashMap<Character, Node>) ROOT.nodes;
-        for(int index = 0; index < word.length(); index++){
-            char character = word.charAt(index);
-            Node node = nodes.containsKey(character)
-                    ? nodes.get(character)
-                    : new Node(character);
-            if(!nodes.containsValue(node)){
-                nodes.put(character, node);
+    public void insert(String word) throws TrieEmptyInputException {
+        if(word.length() == 0){
+            throw new TrieEmptyInputException();
+        } else {
+            HashMap<Character, Node> nodes =
+                    (HashMap<Character, Node>) ROOT.nodes;
+            for(int index = 0; index < word.length(); index++){
+                char character = word.charAt(index);
+                Node node = nodes.containsKey(character)
+                        ? nodes.get(character)
+                        : new Node(character);
+                if(!nodes.containsValue(node)){
+                    nodes.put(character, node);
+                }
+                nodes = (HashMap<Character, Node>)
+                        Objects.requireNonNull(
+                                node.nodes
+                        );
+                node.isWord = (index == word.length() - 1);
             }
-            nodes = (HashMap<Character, Node>)
-                    Objects.requireNonNull(
-                            node.nodes
-                    );
-            node.isWord = (index == word.length() - 1);
         }
     }
 
@@ -48,7 +54,7 @@ public class Trie {
         }
     }
 
-    public boolean startsWith(String prefix){
+    public boolean contains(String prefix){
         HashMap<Character, Node> nodes =
                 (HashMap<Character, Node>) ROOT.nodes;
         Node node = searchNode(prefix);
@@ -59,6 +65,40 @@ public class Trie {
         } else {
             return true;
         }
+    }
+
+    public boolean remove(String word){
+        HashMap<Character, Node> nodes =
+                (HashMap<Character, Node>) ROOT.nodes;
+        Node node = searchNode(word);
+        if(node == null){
+            throw new NullPointerException(
+                    "Fatal error. Returning the null node with the searching phrase " + word + "!"
+            );
+        } else if(!node.isWord){
+            throw new NoSuchElementException(
+                    "Fatal error. The returning node is not the end of the word!"
+            );
+        } else {
+            for(int to = word.length() - 1; to >= 0; to--){
+                if(to > 0){
+                    node = searchNode(word.substring(0, to));
+                    assert node != null;
+                    if(node.nodes.size() == 1){
+                        node.nodes.remove(word.charAt(to));
+                    } else {
+                        break;
+                    }
+                } else {
+                    ROOT.nodes.remove(word.charAt(0));
+                }
+            }
+            return true;
+        }
+    }
+
+    public boolean isEmpty(){
+        return ROOT.nodes.values().size() == 0;
     }
 
     private Node searchNode(String prefix){
@@ -85,14 +125,20 @@ public class Trie {
         library
                 .append("# - starts")
                 .append("\n");
-        for(Node node : nodes.values()){
+        if(nodes.values().size() == 0){
             library
-                    .append("[")
-                    .append(
-                        recursiveVisualisation(node, new StringBuilder())
-                    )
-                    .append("]")
+                    .append("--EMPTY--")
                     .append("\n");
+        } else {
+            for(Node node : nodes.values()){
+                library
+                        .append("[")
+                        .append(
+                                recursiveVisualisation(node, new StringBuilder())
+                        )
+                        .append("]")
+                        .append("\n");
+            }
         }
         library
                 .append("# - ends")
